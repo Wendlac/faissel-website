@@ -1,16 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Mobile Menu Toggle
+
+    // === Header scroll effect ===
+    const header = document.querySelector('.header');
+    window.addEventListener('scroll', () => {
+        header.classList.toggle('header--scrolled', window.scrollY > 20);
+    });
+
+    // === Mobile Menu Toggle ===
     const mobileToggle = document.querySelector('.mobile-toggle');
     const nav = document.querySelector('.nav');
 
     if (mobileToggle && nav) {
         mobileToggle.addEventListener('click', () => {
             nav.classList.toggle('is-open');
-            const isOpen = nav.classList.contains('is-open');
-            mobileToggle.setAttribute('aria-expanded', isOpen);
+            mobileToggle.setAttribute('aria-expanded', nav.classList.contains('is-open'));
         });
 
-        // Close menu when clicking a link
         nav.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 nav.classList.remove('is-open');
@@ -19,73 +24,95 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Scroll Animations (Intersection Observer)
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
-    };
+    // === Scroll Entry Animations ===
+    const animationMap = [
+        { selector: '.hero__title',           delay: 0   },
+        { selector: '.hero__text',            delay: 120 },
+        { selector: '.hero__actions',         delay: 240 },
+        { selector: '.badge',                 delay: 0   },
+        { selector: '.feature__title',        delay: 100 },
+        { selector: '.feature__content > p',  delay: 180 },
+        { selector: '.feature__list',         delay: 180 },
+        { selector: '.contact__title',        delay: 100 },
+        { selector: '.contact__info',         delay: 180 },
+        { selector: '.contact__form',         delay: 240 },
+        { selector: '.feature__image-wrapper',delay: 60, scale: true },
+        { selector: '.contact__image-wrapper',delay: 60, scale: true },
+    ];
 
-    const observer = new IntersectionObserver((entries, observer) => {
+    const scrollObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in');
-                observer.unobserve(entry.target); // Only animate once
+                entry.target.classList.add('animate--visible');
+                scrollObserver.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, { rootMargin: '0px 0px -80px 0px', threshold: 0.1 });
 
-    // Target elements to animate
-    const animateElements = document.querySelectorAll('.hero__title, .hero__text, .feature__image-wrapper, .feature__content, .contact__container');
-    animateElements.forEach(el => {
-        el.style.opacity = '0'; // Initial state
-        el.style.transform = 'translateY(20px)'; // Initial state
-        el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
-        observer.observe(el);
+    animationMap.forEach(({ selector, delay, scale }) => {
+        document.querySelectorAll(selector).forEach(el => {
+            el.classList.add('animate');
+            if (scale) el.classList.add('animate--scale');
+            el.style.transitionDelay = `${delay}ms`;
+            scrollObserver.observe(el);
+        });
     });
 
-    // Add fade-in class style dynamically if not present (or rely on CSS class)
-    // In this case, we are manually setting styles in JS for the initial state 
-    // and letting the class 'fade-in' (defined in CSS) take over, 
-    // OR we can just toggle the class and let CSS handle everything.
-    // Let's refine the observer to just toggle the class and let CSS handle the transition.
-    // Re-setting initial styles here to ensure they are hidden before JS loads if CSS didn't hide them.
-    // But better to rely on CSS class 'fade-in' which we defined in style.css.
+    // === Counter Animation ===
+    const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
 
-    // Actually, let's stick to the CSS class approach for cleaner separation.
-    // The CSS 'fade-in' animation keyframes handle the from/to.
-    // We just need to ensure elements are hidden initially if we want no FOUC, 
-    // but for simplicity, we'll just add the class.
+            const el = entry.target;
+            const text = el.textContent.trim();
+            const target = parseInt(text);
+            const suffix = text.replace(/[0-9]/g, '');
+            const duration = 1600;
+            const start = performance.now();
 
-    // Wait, the CSS keyframes 'fadeIn' starts from opacity 0. 
-    // So we just need to add the class.
-    // However, elements are visible by default. 
-    // So we should add a utility class or inline style to hide them initially 
-    // ONLY if JS is enabled.
+            const tick = (now) => {
+                const progress = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.floor(eased * target) + suffix;
+                if (progress < 1) requestAnimationFrame(tick);
+            };
 
-    animateElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.animationFillMode = 'forwards'; // Ensure it stays visible after animation
-    });
+            requestAnimationFrame(tick);
+            counterObserver.unobserve(el);
+        });
+    }, { threshold: 0.6 });
 
-    // Search Functionality
+    document.querySelectorAll('.stat__number').forEach(el => counterObserver.observe(el));
+
+    // === Active nav link on scroll ===
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav__link[href^="#"]');
+
+    const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => link.classList.remove('nav__link--active'));
+                const active = document.querySelector(`.nav__link[href="#${entry.target.id}"]`);
+                if (active) active.classList.add('nav__link--active');
+            }
+        });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+
+    sections.forEach(section => sectionObserver.observe(section));
+
+    // === Search Functionality ===
     const searchInput = document.getElementById('searchInput');
     const productCards = document.querySelectorAll('.product-card');
 
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-
+            const term = e.target.value.toLowerCase();
             productCards.forEach(card => {
                 const title = card.querySelector('.product-title').textContent.toLowerCase();
                 const desc = card.querySelector('.product-desc').textContent.toLowerCase();
-
-                if (title.includes(searchTerm) || desc.includes(searchTerm)) {
-                    card.classList.remove('hidden');
-                } else {
-                    card.classList.add('hidden');
-                }
+                card.classList.toggle('hidden', !title.includes(term) && !desc.includes(term));
             });
         });
     }
+
 });
