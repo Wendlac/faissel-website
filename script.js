@@ -100,6 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sections.forEach(section => sectionObserver.observe(section));
 
+    // === Boutons devis → WhatsApp ===
+    document.querySelectorAll('.product-card').forEach(card => {
+        const btn = card.querySelector('.btn');
+        const title = card.querySelector('.product-title');
+        if (!btn || !title) return;
+
+        const message = `Bonjour, je souhaite demander un devis pour le produit suivant : *${title.textContent.trim()}*. Pouvez-vous me donner plus d'informations ?`;
+        btn.href = `https://wa.me/22676441084?text=${encodeURIComponent(message)}`;
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+    });
+
     // === Search Functionality ===
     const searchInput = document.getElementById('searchInput');
     const productCards = document.querySelectorAll('.product-card');
