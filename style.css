@@ -785,6 +785,10 @@ select.input {
     font-size: 0.95rem;
 }
 
+.form-message[hidden] {
+    display: none;
+}
+
 .form-message--success {
     background-color: #d1fae5;
     color: #065f46;
